@@ -417,6 +417,7 @@ bool RecordPageHandler::is_full() const { return page_header_->record_num >= pag
 RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
 {
   // TODO: your code here
+  
   exit(-1);
 }
 

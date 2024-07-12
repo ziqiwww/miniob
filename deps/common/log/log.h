@@ -58,7 +58,7 @@ typedef enum
 class Log
 {
 public:
-  Log(const string &log_name, const LOG_LEVEL log_level = LOG_LEVEL_INFO,
+  Log(const string &log_file_name, const LOG_LEVEL log_level = LOG_LEVEL_INFO,
       const LOG_LEVEL console_level = LOG_LEVEL_WARN);
   ~Log(void);
 
