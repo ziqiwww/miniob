@@ -166,7 +166,7 @@ public:
    * @param col_idx_data 列索引数据
    */
   RC init_empty_page(DiskBufferPool &buffer_pool, LogHandler &log_handler, PageNum page_num, int record_size,
-      int col_num, const char *col_idx_data);
+                     int column_num, const char *col_idx_data);
 
   /**
    * @brief 操作结束后做的清理工作，比如释放页面、解锁

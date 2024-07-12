@@ -182,9 +182,9 @@ extern Log *g_log;
 
 #define LOG_HEAD(prefix, level)                                            \
   if (common::g_log) {                                                     \
-    struct timeval tv;                                                     \
+    struct timeval tv{};                                                   \
     gettimeofday(&tv, NULL);                                               \
-    struct tm  curr_time;                                                  \
+    struct tm  curr_time{};                                                \
     struct tm *p = localtime_r(&tv.tv_sec, &curr_time);                    \
                                                                            \
     char sz_head[LOG_HEAD_SIZE] = {0};                                     \

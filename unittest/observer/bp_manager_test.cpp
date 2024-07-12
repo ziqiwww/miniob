@@ -105,7 +105,7 @@ void test_alloc(BPFrameManager &frame_manager)
       Frame *item = frame_manager.alloc(buffer_pool_id, i);
       ASSERT_NE(item, nullptr);
       item->set_buffer_pool_id(buffer_pool_id);
-      item->set_page_num(i);
+      item->set_page_num(static_cast<PageNum>(i));
       used_list.push_back(item);
     }
 
