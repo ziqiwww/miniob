@@ -20,7 +20,8 @@ See the Mulan PSL v2 for more details. */
 using namespace common;
 
 static constexpr int PAGE_HEADER_SIZE = (sizeof(PageHeader));
-RecordPageHandler   *RecordPageHandler::create(StorageFormat format)
+
+RecordPageHandler *RecordPageHandler::create(StorageFormat format)
 {
   if (format == StorageFormat::ROW_FORMAT) {
     return new RowRecordPageHandler();
@@ -28,6 +29,7 @@ RecordPageHandler   *RecordPageHandler::create(StorageFormat format)
     return new PaxRecordPageHandler();
   }
 }
+
 /**
  * @brief 8字节对齐
  * 注: ceiling(a / b) = floor((a + b - 1) / b)
@@ -69,6 +71,7 @@ string PageHeader::to_string() const
 
 ////////////////////////////////////////////////////////////////////////////////
 RecordPageIterator::RecordPageIterator() {}
+
 RecordPageIterator::~RecordPageIterator() {}
 
 void RecordPageIterator::init(RecordPageHandler *record_page_handler, SlotNum start_slot_num /*=0*/)
@@ -184,9 +187,9 @@ RC RecordPageHandler::init_empty_page(
   page_header_->data_offset    = align8(PAGE_HEADER_SIZE + page_bitmap_size(page_header_->record_capacity)) +
                               column_num * sizeof(int) /* column index*/;
   this->fix_record_capacity();
-  ASSERT(page_header_->data_offset + page_header_->record_capacity * page_header_->record_size 
-              <= BP_PAGE_DATA_SIZE, 
-         "Record overflow the page size");
+  ASSERT(page_header_->data_offset + page_header_->record_capacity * page_header_->record_size
+           <= BP_PAGE_DATA_SIZE,
+           "Record overflow the page size");
 
   bitmap_ = frame_->data() + PAGE_HEADER_SIZE;
   memset(bitmap_, 0, page_bitmap_size(page_header_->record_capacity));
@@ -203,8 +206,8 @@ RC RecordPageHandler::init_empty_page(
 
   rc = log_handler_.init_new_page(frame_, page_num, span((const char *)column_index, column_num * sizeof(int)));
   if (OB_FAIL(rc)) {
-    LOG_ERROR("Failed to init empty page: write log failed. page_num:record_size %d:%d. rc=%s", 
-              page_num, record_size, strrc(rc));
+    LOG_ERROR("Failed to init empty page: write log failed. page_num:record_size %d:%d. rc=%s",
+                  page_num, record_size, strrc(rc));
     return rc;
   }
 
@@ -232,9 +235,9 @@ RC RecordPageHandler::init_empty_page(DiskBufferPool &buffer_pool, LogHandler &l
   page_header_->data_offset    = align8(PAGE_HEADER_SIZE + page_bitmap_size(page_header_->record_capacity)) +
                               column_num * sizeof(int) /* column index*/;
   this->fix_record_capacity();
-  ASSERT(page_header_->data_offset + page_header_->record_capacity * page_header_->record_size 
-              <= BP_PAGE_DATA_SIZE, 
-         "Record overflow the page size");
+  ASSERT(page_header_->data_offset + page_header_->record_capacity * page_header_->record_size
+           <= BP_PAGE_DATA_SIZE,
+           "Record overflow the page size");
 
   bitmap_ = frame_->data() + PAGE_HEADER_SIZE;
   memset(bitmap_, 0, page_bitmap_size(page_header_->record_capacity));
@@ -243,8 +246,8 @@ RC RecordPageHandler::init_empty_page(DiskBufferPool &buffer_pool, LogHandler &l
   memcpy(column_index, col_idx_data, column_num * sizeof(int));
 
   if (OB_FAIL(rc)) {
-    LOG_ERROR("Failed to init empty page: write log failed. page_num:record_size %d:%d. rc=%s", 
-              page_num, record_size, strrc(rc));
+    LOG_ERROR("Failed to init empty page: write log failed. page_num:record_size %d:%d. rc=%s",
+                  page_num, record_size, strrc(rc));
     return rc;
   }
 
@@ -268,8 +271,8 @@ RC RecordPageHandler::cleanup()
 
 RC RowRecordPageHandler::insert_record(const char *data, RID *rid)
 {
-  ASSERT(rw_mode_ != ReadWriteMode::READ_ONLY, 
-         "cannot insert record into page while the page is readonly");
+  ASSERT(rw_mode_ != ReadWriteMode::READ_ONLY,
+           "cannot insert record into page while the page is readonly");
 
   if (page_header_->record_num == page_header_->record_capacity) {
     LOG_WARN("Page is full, page_num %d:%d.", disk_buffer_pool_->file_desc(), frame_->page_num());
@@ -284,7 +287,8 @@ RC RowRecordPageHandler::insert_record(const char *data, RID *rid)
 
   RC rc = log_handler_.insert_record(frame_, RID(get_page_num(), index), data);
   if (OB_FAIL(rc)) {
-    LOG_ERROR("Failed to insert record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(), frame_->page_num(), strrc(rc));
+    LOG_ERROR("Failed to insert record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(), frame_->page_num(),
+                  strrc(rc));
     // return rc; // ignore errors
   }
 
@@ -328,8 +332,8 @@ RC RowRecordPageHandler::recover_insert_record(const char *data, const RID &rid)
 
 RC RowRecordPageHandler::delete_record(const RID *rid)
 {
-  ASSERT(rw_mode_ != ReadWriteMode::READ_ONLY, 
-         "cannot delete record from page while the page is readonly");
+  ASSERT(rw_mode_ != ReadWriteMode::READ_ONLY,
+           "cannot delete record from page while the page is readonly");
 
   Bitmap bitmap(bitmap_, page_header_->record_capacity);
   if (bitmap.get_bit(rid->slot_num)) {
@@ -339,7 +343,8 @@ RC RowRecordPageHandler::delete_record(const RID *rid)
 
     RC rc = log_handler_.delete_record(frame_, *rid);
     if (OB_FAIL(rc)) {
-      LOG_ERROR("Failed to delete record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(), frame_->page_num(), strrc(rc));
+      LOG_ERROR("Failed to delete record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(),
+                      frame_->page_num(), strrc(rc));
       // return rc; // ignore errors
     }
 
@@ -356,7 +361,7 @@ RC RowRecordPageHandler::update_record(const RID &rid, const char *data)
 
   if (rid.slot_num >= page_header_->record_capacity) {
     LOG_ERROR("Invalid slot_num %d, exceed page's record capacity, frame=%s, page_header=%s",
-              rid.slot_num, frame_->to_string().c_str(), page_header_->to_string().c_str());
+                  rid.slot_num, frame_->to_string().c_str(), page_header_->to_string().c_str());
     return RC::INVALID_ARGUMENT;
   }
 
@@ -373,8 +378,8 @@ RC RowRecordPageHandler::update_record(const RID &rid, const char *data)
 
     RC rc = log_handler_.update_record(frame_, rid, data);
     if (OB_FAIL(rc)) {
-      LOG_ERROR("Failed to update record. page_num %d:%d. rc=%s", 
-                disk_buffer_pool_->file_desc(), frame_->page_num(), strrc(rc));
+      LOG_ERROR("Failed to update record. page_num %d:%d. rc=%s",
+                      disk_buffer_pool_->file_desc(), frame_->page_num(), strrc(rc));
       // return rc; // ignore errors
     }
 
@@ -389,7 +394,7 @@ RC RowRecordPageHandler::get_record(const RID &rid, Record &record)
 {
   if (rid.slot_num >= page_header_->record_capacity) {
     LOG_ERROR("Invalid slot_num %d, exceed page's record capacity, frame=%s, page_header=%s",
-              rid.slot_num, frame_->to_string().c_str(), page_header_->to_string().c_str());
+                  rid.slot_num, frame_->to_string().c_str(), page_header_->to_string().c_str());
     return RC::RECORD_INVALID_RID;
   }
 
@@ -417,14 +422,40 @@ bool RecordPageHandler::is_full() const { return page_header_->record_num >= pag
 RC PaxRecordPageHandler::insert_record(const char *data, RID *rid)
 {
   // TODO: your code here
-  
-  exit(-1);
+  Bitmap bitmap(bitmap_, page_header_->record_capacity);
+  int    index = bitmap.next_unsetted_bit(0);
+  bitmap.set_bit(index);
+  page_header_->record_num++;
+
+  RC rc = log_handler_.insert_record(frame_, RID(get_page_num(), index), data);
+  if (OB_FAIL(rc)) {
+    LOG_ERROR("Failed to insert record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(), frame_->page_num(),
+                  strrc(rc));
+    // return rc; // ignore errors
+  }
+  // split the data into columns
+  int col_off = 0;
+  for (int i = 0; i < page_header_->column_num; ++i) {
+    auto col_size = get_field_len(i);
+    auto src_data = data + col_off;
+    auto dst_data = get_field_data(index, i);
+    memcpy(dst_data, src_data, col_size);
+    col_off += col_size;
+  }
+
+  frame_->mark_dirty();
+  if (rid) {
+    rid->page_num = get_page_num();
+    rid->slot_num = index;
+  }
+
+  return RC::SUCCESS;
 }
 
 RC PaxRecordPageHandler::delete_record(const RID *rid)
 {
-  ASSERT(rw_mode_ != ReadWriteMode::READ_ONLY, 
-         "cannot delete record from page while the page is readonly");
+  ASSERT(rw_mode_ != ReadWriteMode::READ_ONLY,
+           "cannot delete record from page while the page is readonly");
 
   Bitmap bitmap(bitmap_, page_header_->record_capacity);
   if (bitmap.get_bit(rid->slot_num)) {
@@ -434,7 +465,8 @@ RC PaxRecordPageHandler::delete_record(const RID *rid)
 
     RC rc = log_handler_.delete_record(frame_, *rid);
     if (OB_FAIL(rc)) {
-      LOG_ERROR("Failed to delete record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(), frame_->page_num(), strrc(rc));
+      LOG_ERROR("Failed to delete record. page_num %d:%d. rc=%s", disk_buffer_pool_->file_desc(),
+                      frame_->page_num(), strrc(rc));
       // return rc; // ignore errors
     }
 
@@ -447,15 +479,46 @@ RC PaxRecordPageHandler::delete_record(const RID *rid)
 
 RC PaxRecordPageHandler::get_record(const RID &rid, Record &record)
 {
-  // your code here
-  exit(-1);
+  if (rid.slot_num >= page_header_->record_capacity) {
+    LOG_ERROR("Invalid slot_num %d, exceed page's record capacity, frame=%s, page_header=%s",
+                  rid.slot_num, frame_->to_string().c_str(), page_header_->to_string().c_str());
+    return RC::RECORD_INVALID_RID;
+  }
+
+  Bitmap bitmap(bitmap_, page_header_->record_capacity);
+  if (!bitmap.get_bit(rid.slot_num)) {
+    LOG_ERROR("Invalid slot_num:%d, slot is empty, page_num %d.", rid.slot_num, frame_->page_num());
+    return RC::RECORD_NOT_EXIST;
+  }
+
+  record.set_rid(rid);
+  // assemble the data from columns
+  auto data    = (char *)malloc(page_header_->record_real_size);
+  int  col_off = 0;
+  for (int i = 0; i < page_header_->column_num; ++i) {
+    auto       col_len  = get_field_len(i);
+    const auto src_data = get_field_data(rid.slot_num, i);
+    memcpy(data + col_off, src_data, col_len);
+    col_off += col_len;
+  }
+  record.set_data_owner(data, page_header_->record_real_size);
+  return RC::SUCCESS;
 }
 
-// TODO: specify the column_ids that chunk needed. currenly we get all columns
+// TODO: specify the column_ids that chunk needed. currently we get all columns
 RC PaxRecordPageHandler::get_chunk(Chunk &chunk)
 {
-  // your code here
-  exit(-1);
+  Bitmap bitmap(bitmap_, page_header_->record_capacity);
+  for (int i = 0; i < chunk.column_num(); ++i) {
+    auto &col = chunk.column(i);
+    for (int j = 0; j < page_header_->record_capacity; ++j) {
+      auto data = get_field_data(j, chunk.column_ids(i));
+      if (bitmap.get_bit(j)) {
+        col.append_one(data);
+      }
+    }
+  }
+  return RC::SUCCESS;
 }
 
 char *PaxRecordPageHandler::get_field_data(SlotNum slot_num, int col_id)
